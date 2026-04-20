@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>API Tester – Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:      #0f1117;
+      --card:    #1a1d27;
+      --border:  #2a2d3e;
+      --green:   #2ecc71;
+      --red:     #e74c3c;
+      --yellow:  #f39c12;
+      --blue:    #3498db;
+      --text:    #e0e0e0;
+      --muted:   #8892a4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 1.3rem; }
+    header span { color: var(--muted); font-size: 0.85rem; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+    .kpi .label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .kpi .value { font-size: 2rem; font-weight: 700; }
+    .kpi .value.green  { color: var(--green); }
+    .kpi .value.red    { color: var(--red); }
+    .kpi .value.yellow { color: var(--yellow); }
+    .kpi .value.blue   { color: var(--blue); }
+
+    .actions { margin-bottom: 28px; display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      padding: 10px 22px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary { background: var(--blue); color: white; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn:hover { opacity: 0.85; }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 28px;
+    }
+    .chart-card h2 { font-size: 1rem; margin-bottom: 16px; color: var(--muted); }
+    canvas { max-height: 200px; }
+
+    .table-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .table-card h2 { font-size: 1rem; padding: 16px 20px; border-bottom: 1px solid var(--border); color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #12141e; padding: 12px 16px; text-align: left; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    td { padding: 12px 16px; font-size: 0.88rem; border-top: 1px solid var(--border); }
+    tr:hover td { background: #1e2130; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge-ok   { background: rgba(46,204,113,.15); color: var(--green); }
+    .badge-warn { background: rgba(243,156,18,.15);  color: var(--yellow); }
+    .badge-fail { background: rgba(231,76,60,.15);   color: var(--red); }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .empty { padding: 40px; text-align: center; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🔍 API Tester — Frankfurter</h1>
+  <span>Dashboard de monitoring QoS</span>
+</header>
+
+<div class="container">
+
+  {% if last %}
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="label">Disponibilité</div>
+      <div class="value {% if last.availability >= 0.9 %}green{% elif last.availability >= 0.7 %}yellow{% else %}red{% endif %}">
+        {{ (last.availability * 100) | round(1) }}%
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="label">Taux d'erreur</div>
+      <div class="value {% if last.error_rate == 0 %}green{% elif last.error_rate < 0.2 %}yellow{% else %}red{% endif %}">
+        {{ (last.error_rate * 100) | round(1) }}%
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="label">Latence moy.</div>
+      <div class="value blue">{{ last.latency_avg }} ms</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Latence p95</div>
+      <div class="value blue">{{ last.latency_p95 }} ms</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Tests passés</div>
+      <div class="value green">{{ last.passed }}</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Tests échoués</div>
+      <div class="value {% if last.failed == 0 %}green{% else %}red{% endif %}">{{ last.failed }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="actions">
+    <a href="/run" class="btn btn-primary">▶ Lancer un run</a>
+    <a href="/export" class="btn btn-outline">⬇ Export JSON</a>
+    <a href="/health" class="btn btn-outline">❤ Health check</a>
+  </div>
+
+  {% if trend and trend != '[]' %}
+  <div class="chart-card">
+    <h2>Tendance latence – 10 derniers runs</h2>
+    <canvas id="latencyChart"></canvas>
+  </div>
+  {% endif %}
+
+  <div class="table-card">
+    <h2>Historique des runs</h2>
+    {% if runs %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Timestamp</th>
+          <th>Statut</th>
+          <th>Passés</th>
+          <th>Échoués</th>
+          <th>Erreurs</th>
+          <th>Dispo.</th>
+          <th>Taux err.</th>
+          <th>Avg ms</th>
+          <th>P95 ms</th>
+          <th>Détail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in runs %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.timestamp[:19].replace('T',' ') }}</td>
+          <td>
+            {% if r.availability >= 0.9 %}
+              <span class="badge badge-ok">OK</span>
+            {% elif r.availability >= 0.7 %}
+              <span class="badge badge-warn">WARN</span>
+            {% else %}
+              <span class="badge badge-fail">KO</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--green)">{{ r.passed }}</td>
+          <td style="color:{% if r.failed > 0 %}var(--red){% else %}var(--green){% endif %}">{{ r.failed }}</td>
+          <td style="color:{% if r.errors > 0 %}var(--yellow){% else %}var(--muted){% endif %}">{{ r.errors }}</td>
+          <td>{{ (r.availability * 100) | round(1) }}%</td>
+          <td>{{ (r.error_rate * 100) | round(1) }}%</td>
+          <td>{{ r.latency_avg }}</td>
+          <td>{{ r.latency_p95 }}</td>
+          <td><a href="/run/{{ r.id }}">voir</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">Aucun run enregistré. Cliquez sur "Lancer un run" pour commencer.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+const trend = {{ trend | safe }};
+if (trend.length > 0) {
+  const ctx = document.getElementById('latencyChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: trend.map(d => d.ts),
+      datasets: [
+        {
+          label: 'Avg (ms)',
+          data: trend.map(d => d.avg),
+          borderColor: '#3498db',
+          backgroundColor: 'rgba(52,152,219,.1)',
+          tension: 0.4,
+          fill: true,
+        },
+        {
+          label: 'P95 (ms)',
+          data: trend.map(d => d.p95),
+          borderColor: '#e74c3c',
+          backgroundColor: 'rgba(231,76,60,.05)',
+          tension: 0.4,
+          borderDash: [5, 5],
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#e0e0e0' } } },
+      scales: {
+        x: { ticks: { color: '#8892a4' }, grid: { color: '#2a2d3e' } },
+        y: { ticks: { color: '#8892a4' }, grid: { color: '#2a2d3e' } }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
