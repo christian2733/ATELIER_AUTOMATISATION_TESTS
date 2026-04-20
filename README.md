@@ -32,7 +32,7 @@ Difficulté : Faible (~10 minutes)
 Rendez-vous sur **https://www.pythonanywhere.com/** et créez vous un compte. Puis créez un serveur Web **Flask 3.13**. 
   
 ---------------------------------------------------------------------------------------------
-🧩 Séquence 3 : Les Actions GitHUB (Industrialisation Continue)
+🧩 Séquence 3 : Les Actions GitHUB (Industrialisation Continue)-CFME
 ---------------------------------------------------------------------------------------------
 Objectif : Automatiser la mise à jour de votre hébergement Pythonanywhere  
 Difficulté : Moyenne (~15 minutes)
